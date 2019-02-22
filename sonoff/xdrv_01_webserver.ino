@@ -1236,9 +1236,9 @@ void WifiSaveSettings(void)
   WebGetArg("s2", tmp, sizeof(tmp));
   strlcpy(Settings.sta_ssid[1], (!strlen(tmp)) ? STA_SSID2 : tmp, sizeof(Settings.sta_ssid[1]));
   WebGetArg("p1", tmp, sizeof(tmp));
-  strlcpy(Settings.sta_pwd[0], (!strlen(tmp)) ? "" : (!strcmp(tmp,D_ASTERISK_PWD)) ? Settings.sta_pwd[0] : tmp, sizeof(Settings.sta_pwd[0]));
+  strlcpy(Settings.sta_pwd[0], (!strlen(tmp)) ? "" : (strlen(tmp) < 5) ? Settings.sta_pwd[0] : tmp, sizeof(Settings.sta_pwd[0]));
   WebGetArg("p2", tmp, sizeof(tmp));
-  strlcpy(Settings.sta_pwd[1], (!strlen(tmp)) ? "" : (!strcmp(tmp,D_ASTERISK_PWD)) ? Settings.sta_pwd[1] : tmp, sizeof(Settings.sta_pwd[1]));
+  strlcpy(Settings.sta_pwd[1], (!strlen(tmp)) ? "" : (strlen(tmp) < 5) ? Settings.sta_pwd[1] : tmp, sizeof(Settings.sta_pwd[1]));
   snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_WIFI D_CMND_HOSTNAME " %s, " D_CMND_SSID "1 %s, " D_CMND_SSID "2 %s"),
     Settings.hostname, Settings.sta_ssid[0], Settings.sta_ssid[1]);
   AddLog(LOG_LEVEL_INFO);
@@ -1968,6 +1968,7 @@ void HandleHttpCommand(void)
             if (JSON) { // Is it a JSON message (and not only [15:26:08 MQT: stat/wemos5/POWER = O])
               if (message.length() > 1) { message += F(","); }
               size_t JSONlen = len - (JSON - tmp);
+              if (JSONlen > sizeof(mqtt_data)) { JSONlen = sizeof(mqtt_data); }
               strlcpy(mqtt_data, JSON +1, JSONlen -2);
               message += mqtt_data;
             }
@@ -2047,6 +2048,7 @@ void HandleAjaxConsoleRefresh(void)
         } else {
           cflg = true;
         }
+        if (len > sizeof(mqtt_data) -2) { len = sizeof(mqtt_data); }
         strlcpy(mqtt_data, tmp, len);
         message += mqtt_data; // mqtt_data used as scratch space
       }
@@ -2197,8 +2199,14 @@ int WebSend(char *buffer)
 //snprintf_P(log_data, sizeof(log_data), PSTR("DBG: Uri |%s|"), url.c_str());
 //AddLog(LOG_LEVEL_DEBUG);
 
+#if defined(ARDUINO_ESP8266_RELEASE_2_3_0) || defined(ARDUINO_ESP8266_RELEASE_2_4_0) || defined(ARDUINO_ESP8266_RELEASE_2_4_1) || defined(ARDUINO_ESP8266_RELEASE_2_4_2)
     HTTPClient http;
     if (http.begin(UrlEncode(url))) {         // UrlEncode(url) = |http://192.168.178.86/cm?cmnd=POWER1%20ON|
+#else
+    WiFiClient http_client;
+    HTTPClient http;
+    if (http.begin(http_client, UrlEncode(url))) {  // UrlEncode(url) = |http://192.168.178.86/cm?cmnd=POWER1%20ON|
+#endif
       int http_code = http.GET();             // Start connection and send HTTP header
       if (http_code > 0) {                    // http_code will be negative on error
         if (http_code == HTTP_CODE_OK || http_code == HTTP_CODE_MOVED_PERMANENTLY) {
@@ -2209,8 +2217,7 @@ int WebSend(char *buffer)
           for (uint16_t i = 0; i < result.length(); i++) {
             char text = result.charAt(i);
             if (text > 31) {                  // Remove control characters like linefeed
-              mqtt_data[j] = result.charAt(i);
-              j++;
+              mqtt_data[j++] = text;
               if (j == sizeof(mqtt_data) -2) { break; }
             }
           }
@@ -2222,7 +2229,7 @@ int WebSend(char *buffer)
       } else {
         status = 2;                           // Connection failed
       }
-      http.end();
+      http.end();                             // Clean up connection data
     } else {
       status = 3;                             // Host not found or connection error
     }
