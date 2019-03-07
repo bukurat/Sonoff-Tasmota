@@ -1,5 +1,16 @@
-/* 6.4.1.18 20191221
+/* 6.4.1.19 20190222
+ * Add command SetOption37 for RGBCW color mapping (#5326)
+ * Add Korean language translations (#5344)
+ * Fix Energy TotalStartTime when commands EnergyReset0 and/or EnergyReset3 used (#5373)
+ * Fix DS18S20 temperature calculation (#5375)
+ * Fix float calculations in range from 0 to -1 (#5386)
+ *
+ * 6.4.1.18 20190221
  * Fix some exceptions and watchdogs due to lack of stack space - part 1 (#5215)
+ * Fix some exceptions and watchdogs due to lack of stack space - part 2
+ * Add command SetOption62 0/1 to disable retain on Button or Swith hold messages (#5299)
+ * Add option WifiConfig 7 to allow reset of device in AP mode without admin password (#5297)
+ * Fix command WebSend when using a port number as regression from 6.4.1.17 (#5304)
  *
  * 6.4.1.17 20190214
  * Change template update by removing possibility to add user module config keeping template as defined (#5222)
