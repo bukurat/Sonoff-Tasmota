@@ -54,7 +54,7 @@ const char kIrHvacVendors[] PROGMEM = "Toshiba|Mitsubishi|LG|Fujitsu" ;
 // HVAC LG
 #define HVAC_LG_DATALEN 7
 
-IRMitsubishiAC *mitsubir = NULL;
+IRMitsubishiAC *mitsubir = nullptr;
 
 const char kFanSpeedOptions[] = "A12345S";
 const char kHvacModeOptions[] = "HDCA";
@@ -66,7 +66,7 @@ const char kHvacModeOptions[] = "HDCA";
 
 #include <IRsend.h>
 
-IRsend *irsend = NULL;
+IRsend *irsend = nullptr;
 bool irsend_active = false;
 
 void IrSendInit(void)
@@ -90,7 +90,7 @@ void IrSendInit(void)
 
 #include <IRrecv.h>
 
-IRrecv *irrecv = NULL;
+IRrecv *irrecv = nullptr;
 
 unsigned long ir_lasttime = 0;
 
@@ -131,19 +131,19 @@ void IrReceiveCheck(void)
       } else {
         snprintf_P(stemp, sizeof(stemp), PSTR("\"0x%lX\""), (uint32_t)results.value);
       }
-      snprintf_P(mqtt_data, sizeof(mqtt_data), PSTR("{\"" D_JSON_IRRECEIVED "\":{\"" D_JSON_IR_PROTOCOL "\":\"%s\",\"" D_JSON_IR_BITS "\":%d,\"" D_JSON_IR_DATA "\":%s"),
+      Response_P(PSTR("{\"" D_JSON_IRRECEIVED "\":{\"" D_JSON_IR_PROTOCOL "\":\"%s\",\"" D_JSON_IR_BITS "\":%d,\"" D_JSON_IR_DATA "\":%s"),
         GetTextIndexed(sirtype, sizeof(sirtype), iridx, kIrRemoteProtocols), results.bits, stemp);
 
       if (Settings.flag3.receive_raw) {
-        snprintf_P(mqtt_data, sizeof(mqtt_data), PSTR("%s,\"" D_JSON_IR_RAWDATA "\":["), mqtt_data);
+        ResponseAppend_P(PSTR(",\"" D_JSON_IR_RAWDATA "\":["));
         uint16_t i;
         for (i = 1; i < results.rawlen; i++) {
-          if (i > 1) { snprintf_P(mqtt_data, sizeof(mqtt_data), PSTR("%s,"), mqtt_data); }
+          if (i > 1) { ResponseAppend_P(PSTR(",")); }
           uint32_t usecs;
           for (usecs = results.rawbuf[i] * kRawTick; usecs > UINT16_MAX; usecs -= UINT16_MAX) {
-            snprintf_P(mqtt_data, sizeof(mqtt_data), PSTR("%s%d,0,"), mqtt_data, UINT16_MAX);
+            ResponseAppend_P(PSTR("%d,0,"), UINT16_MAX);
           }
-          snprintf_P(mqtt_data, sizeof(mqtt_data), PSTR("%s%d"), mqtt_data, usecs);
+          ResponseAppend_P(PSTR("%d"), usecs);
           if (strlen(mqtt_data) > sizeof(mqtt_data) - 40) { break; }  // Quit if char string becomes too long
         }
         uint16_t extended_length = results.rawlen - 1;
@@ -152,10 +152,10 @@ void IrReceiveCheck(void)
           // Add two extra entries for multiple larger than UINT16_MAX it is.
           extended_length += (usecs / (UINT16_MAX + 1)) * 2;
         }
-        snprintf_P(mqtt_data, sizeof(mqtt_data), PSTR("%s],\"" D_JSON_IR_RAWDATA "Info\":[%d,%d,%d]"), mqtt_data, extended_length, i -1, results.overflow);
+        ResponseAppend_P(PSTR("],\"" D_JSON_IR_RAWDATA "Info\":[%d,%d,%d]"), extended_length, i -1, results.overflow);
       }
 
-      snprintf_P(mqtt_data, sizeof(mqtt_data), PSTR("%s}}"), mqtt_data);
+      ResponseAppend_P(PSTR("}}"));
       MqttPublishPrefixTopic_P(RESULT_OR_TELE, PSTR(D_JSON_IRRECEIVED));
 
       if (iridx) {
@@ -189,7 +189,7 @@ bool IrHvacToshiba(const char *HVAC_Mode, const char *HVAC_FanMode, bool HVAC_Po
   char *p;
   uint8_t mode;
 
-  if (HVAC_Mode == NULL) {
+  if (HVAC_Mode == nullptr) {
     p = (char *)kHvacModeOptions; // default HVAC_HOT
   }
   else {
@@ -204,7 +204,7 @@ bool IrHvacToshiba(const char *HVAC_Mode, const char *HVAC_FanMode, bool HVAC_Po
     data[6] = (uint8_t)0x07; // Turn OFF HVAC
   }
 
-  if (HVAC_FanMode == NULL) {
+  if (HVAC_FanMode == nullptr) {
     p = (char *)kFanSpeedOptions; // default FAN_SPEED_AUTO
   }
   else {
@@ -283,7 +283,7 @@ bool IrHvacMitsubishi(const char *HVAC_Mode, const char *HVAC_FanMode, bool HVAC
 
   mitsubir->stateReset();
 
-  if (HVAC_Mode == NULL) {
+  if (HVAC_Mode == nullptr) {
     p = (char *)kHvacModeOptions; // default HVAC_HOT
   }
   else {
@@ -297,7 +297,7 @@ bool IrHvacMitsubishi(const char *HVAC_Mode, const char *HVAC_FanMode, bool HVAC
 
   mitsubir->setPower(HVAC_Power);
 
-  if (HVAC_FanMode == NULL) {
+  if (HVAC_FanMode == nullptr) {
     p = (char *)kFanSpeedOptions; // default FAN_SPEED_AUTO
   }
   else {
@@ -350,7 +350,7 @@ bool IrHvacLG(const char *HVAC_Mode, const char *HVAC_FanMode, bool HVAC_Power, 
   else {
 
     // Set code for HVAC Mode - data[3]
-    if (HVAC_Mode == NULL) {
+    if (HVAC_Mode == nullptr) {
       p = (char *)kHvacModeOptions; // default HVAC_HOT
     }
     else {
@@ -394,7 +394,7 @@ bool IrHvacLG(const char *HVAC_Mode, const char *HVAC_FanMode, bool HVAC_Power, 
     data[4] = (uint8_t)(Temp - 15);
 
     // Set code for HVAC fan mode - data[5]
-    if (HVAC_FanMode == NULL) {
+    if (HVAC_FanMode == nullptr) {
       p = (char *)kFanSpeedOptions; // default FAN_SPEED_AUTO
     }
     else {
@@ -462,7 +462,7 @@ bool IrHvacFujitsu(const char *HVAC_Mode, const char *HVAC_FanMode, bool HVAC_Po
   ac.setSwing(FUJITSU_AC_SWING_VERT);
 
   char *p;
-  if (NULL == HVAC_Mode) {
+  if (nullptr == HVAC_Mode) {
     p = (char *)kFujitsuHvacModeOptions;
   }
   else {
@@ -473,7 +473,7 @@ bool IrHvacFujitsu(const char *HVAC_Mode, const char *HVAC_FanMode, bool HVAC_Po
   }
   ac.setMode(modes[p - kFujitsuHvacModeOptions]);
 
-  if (HVAC_FanMode == NULL) {
+  if (HVAC_FanMode == nullptr) {
     p = (char *)kFanSpeedOptions; // default FAN_SPEED_AUTO
   }
   else {
@@ -516,9 +516,9 @@ bool IrSendCommand(void)
   }
   else if (CMND_IRSEND == command_code) {
     if (XdrvMailbox.data_len) {
-      snprintf_P(mqtt_data, sizeof(mqtt_data), S_JSON_COMMAND_SVALUE, command, D_JSON_DONE);
+      Response_P(S_JSON_COMMAND_SVALUE, command, D_JSON_DONE);
 
-      if (!strstr(XdrvMailbox.data, "{")) {  // If no JSON it must be rawdata
+      if (strstr(XdrvMailbox.data, "{") == nullptr) {  // If no JSON it must be rawdata
         // IRSend frequency, rawdata, rawdata ...
         char *p;
         char *str = strtok_r(XdrvMailbox.data, ", ", &p);
@@ -531,8 +531,8 @@ bool IrSendCommand(void)
           count++;
           uint16_t raw_array[count];  // It's safe to use stack for up to 240 packets (limited by mqtt_data length)
           uint8_t i = 0;
-          for (str = strtok_r(NULL, ", ", &p); str && i < count; str = strtok_r(NULL, ", ", &p)) {
-            raw_array[i++] = strtoul(str, NULL, 0);  // Allow decimal (5246996) and hexadecimal (0x501014) input
+          for (str = strtok_r(nullptr, ", ", &p); str && i < count; str = strtok_r(nullptr, ", ", &p)) {
+            raw_array[i++] = strtoul(str, nullptr, 0);  // Allow decimal (5246996) and hexadecimal (0x501014) input
           }
 
 //          AddLog_P2(LOG_LEVEL_DEBUG, PSTR("IRS: Count %d, Freq %d, Arr[0] %d, Arr[count -1] %d"), count, freq, raw_array[0], raw_array[count -1]);
@@ -540,11 +540,11 @@ bool IrSendCommand(void)
           irsend_active = true;
           irsend->sendRaw(raw_array, count, freq);
           if (!count) {
-            snprintf_P(mqtt_data, sizeof(mqtt_data), S_JSON_COMMAND_SVALUE, command, D_JSON_FAILED);
+            Response_P(S_JSON_COMMAND_SVALUE, command, D_JSON_FAILED);
           }
         }
         else {
-          snprintf_P(mqtt_data, sizeof(mqtt_data), S_JSON_COMMAND_SVALUE, command, D_JSON_INVALID_RAWDATA);
+          Response_P(S_JSON_COMMAND_SVALUE, command, D_JSON_INVALID_RAWDATA);
         }
       }
       else {
@@ -553,14 +553,14 @@ bool IrSendCommand(void)
         StaticJsonBuffer<128> jsonBuf;
         JsonObject &root = jsonBuf.parseObject(dataBufUc);
         if (!root.success()) {
-          snprintf_P(mqtt_data, sizeof(mqtt_data), S_JSON_COMMAND_SVALUE, command, D_JSON_INVALID_JSON);
+          Response_P(S_JSON_COMMAND_SVALUE, command, D_JSON_INVALID_JSON);
         }
         else {
           // IRsend { "protocol": "SAMSUNG", "bits": 32, "data": 551502015 }
           char parm_uc[10];
           const char *protocol = root[UpperCase_P(parm_uc, PSTR(D_JSON_IR_PROTOCOL))];
           uint32_t bits = root[UpperCase_P(parm_uc, PSTR(D_JSON_IR_BITS))];
-          uint32_t data = strtoul(root[UpperCase_P(parm_uc, PSTR(D_JSON_IR_DATA))], NULL, 0);
+          uint32_t data = strtoul(root[UpperCase_P(parm_uc, PSTR(D_JSON_IR_DATA))], nullptr, 0);
           if (protocol && bits) {
             char protocol_text[20];
             int protocol_code = GetCommandCode(protocol_text, sizeof(protocol_text), protocol, kIrRemoteProtocols);
@@ -588,7 +588,7 @@ bool IrSendCommand(void)
                 irsend->sendPanasonic(bits, data); break;
               default:
                 irsend_active = false;
-                snprintf_P(mqtt_data, sizeof(mqtt_data), S_JSON_COMMAND_SVALUE, command, D_JSON_PROTOCOL_NOT_SUPPORTED);
+                Response_P(S_JSON_COMMAND_SVALUE, command, D_JSON_PROTOCOL_NOT_SUPPORTED);
             }
           }
           else {
@@ -601,7 +601,7 @@ bool IrSendCommand(void)
       error = true;
     }
     if (error) {
-      snprintf_P(mqtt_data, sizeof(mqtt_data), PSTR("{\"" D_CMND_IRSEND "\":\"" D_JSON_NO " " D_JSON_IR_PROTOCOL ", " D_JSON_IR_BITS " " D_JSON_OR " " D_JSON_IR_DATA "\"}"));
+      Response_P(PSTR("{\"" D_CMND_IRSEND "\":\"" D_JSON_NO " " D_JSON_IR_PROTOCOL ", " D_JSON_IR_BITS " " D_JSON_OR " " D_JSON_IR_DATA "\"}"));
     }
   }
 #ifdef USE_IR_HVAC
@@ -618,10 +618,10 @@ bool IrSendCommand(void)
       StaticJsonBuffer<164> jsonBufer;
       JsonObject &root = jsonBufer.parseObject(dataBufUc);
       if (!root.success()) {
-        snprintf_P(mqtt_data, sizeof(mqtt_data), S_JSON_COMMAND_SVALUE, command, D_JSON_INVALID_JSON);
+        Response_P(S_JSON_COMMAND_SVALUE, command, D_JSON_INVALID_JSON);
       }
       else {
-        snprintf_P(mqtt_data, sizeof(mqtt_data), S_JSON_COMMAND_SVALUE, command, D_JSON_DONE);
+        Response_P(S_JSON_COMMAND_SVALUE, command, D_JSON_DONE);
         HVAC_Vendor = root[D_JSON_IRHVAC_VENDOR];
         HVAC_Power = root[D_JSON_IRHVAC_POWER];
         HVAC_Mode = root[D_JSON_IRHVAC_MODE];
@@ -650,7 +650,7 @@ bool IrSendCommand(void)
       error = true;
     }
     if (error) {
-      snprintf_P(mqtt_data, sizeof(mqtt_data), PSTR("{\"" D_CMND_IRHVAC "\":\"" D_JSON_WRONG " " D_JSON_IRHVAC_VENDOR ", " D_JSON_IRHVAC_MODE " " D_JSON_OR " " D_JSON_IRHVAC_FANSPEED "\"}"));
+      Response_P(PSTR("{\"" D_CMND_IRHVAC "\":\"" D_JSON_WRONG " " D_JSON_IRHVAC_VENDOR ", " D_JSON_IRHVAC_MODE " " D_JSON_OR " " D_JSON_IRHVAC_FANSPEED "\"}"));
     }
   }
 #endif // USE_IR_HVAC

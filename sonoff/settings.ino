@@ -306,7 +306,7 @@ void EepromEnd(void)
 
 uint16_t settings_crc = 0;
 uint32_t settings_location = SETTINGS_LOCATION;
-uint8_t *settings_buffer = NULL;
+uint8_t *settings_buffer = nullptr;
 
 /********************************************************************************************/
 /*
@@ -333,9 +333,9 @@ void SetFlashModeDout(void)
 
 void SettingsBufferFree(void)
 {
-  if (settings_buffer != NULL) {
+  if (settings_buffer != nullptr) {
     free(settings_buffer);
-    settings_buffer = NULL;
+    settings_buffer = nullptr;
   }
 }
 
@@ -815,6 +815,8 @@ void SettingsDefaultSet2(void)
     Settings.rgbwwTable[j] = 255;
   }
 
+  Settings.novasds_period = WORKING_PERIOD;
+
   memset(&Settings.drivers, 0xFF, 32);  // Enable all possible monitors, displays, drivers and sensors
 }
 
@@ -1054,6 +1056,9 @@ void SettingsDelta(void)
     }
     if (Settings.version < 0x06040113) {
       Settings.param[P_RGB_REMAP] = RGB_REMAP_RGBW;
+    }
+    if (Settings.version < 0x06050003) {
+      Settings.novasds_period = WORKING_PERIOD;
     }
 
     Settings.version = VERSION;

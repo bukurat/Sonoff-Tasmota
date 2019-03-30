@@ -139,15 +139,15 @@ size_t strchrspn(const char *str1, int character)
 char* subStr(char* dest, char* str, const char *delim, int index)
 {
   char *act;
-  char *sub = NULL;
+  char *sub = nullptr;
   char *ptr;
   int i;
 
   // Since strtok consumes the first arg, make a copy
   strncpy(dest, str, strlen(str)+1);
-  for (i = 1, act = dest; i <= index; i++, act = NULL) {
+  for (i = 1, act = dest; i <= index; i++, act = nullptr) {
     sub = strtok_r(act, delim, &ptr);
-    if (sub == NULL) break;
+    if (sub == nullptr) break;
   }
   sub = Trim(sub);
   return sub;
@@ -283,6 +283,19 @@ char* RemoveSpace(char* p)
   return p;
 }
 
+char* LowerCase(char* dest, const char* source)
+{
+  char* write = dest;
+  const char* read = source;
+  char ch = '.';
+
+  while (ch != '\0') {
+    ch = *read++;
+    *write++ = tolower(ch);
+  }
+  return dest;
+}
+
 char* UpperCase(char* dest, const char* source)
 {
   char* write = dest;
@@ -364,9 +377,9 @@ bool ParseIp(uint32_t* addr, const char* str)
 
   *addr = 0;
   for (i = 0; i < 4; i++) {
-    part[i] = strtoul(str, NULL, 10);        // Convert byte
+    part[i] = strtoul(str, nullptr, 10);        // Convert byte
     str = strchr(str, '.');
-    if (str == NULL || *str == '\0') {
+    if (str == nullptr || *str == '\0') {
       break;  // No more separators, exit
     }
     str++;                                   // Point to next character after separator
@@ -409,7 +422,7 @@ bool NewerVersion(char* version_str)
     return false;  // Bail if we can't duplicate. Assume bad.
   }
   // Loop through the version string, splitting on '.' seperators.
-  for (char *str = strtok_r(version_dup, ".", &str_ptr); str && i < sizeof(VERSION); str = strtok_r(NULL, ".", &str_ptr), i++) {
+  for (char *str = strtok_r(version_dup, ".", &str_ptr); str && i < sizeof(VERSION); str = strtok_r(nullptr, ".", &str_ptr), i++) {
     int field = atoi(str);
     // The fields in a version string can only range from 0-255.
     if ((field < 0) || (field > 255)) {
@@ -698,6 +711,31 @@ void ShowSource(int source)
 }
 
 /*********************************************************************************************\
+ * Response data handling
+\*********************************************************************************************/
+
+int Response_P(const char* format, ...)     // Content send snprintf_P char data
+{
+  // This uses char strings. Be aware of sending %% if % is needed
+  va_list args;
+  va_start(args, format);
+  int len = vsnprintf_P(mqtt_data, sizeof(mqtt_data), format, args);
+  va_end(args);
+  return len;
+}
+
+int ResponseAppend_P(const char* format, ...)  // Content send snprintf_P char data
+{
+  // This uses char strings. Be aware of sending %% if % is needed
+  va_list args;
+  va_start(args, format);
+  int mlen = strlen(mqtt_data);
+  int len = vsnprintf_P(mqtt_data + mlen, sizeof(mqtt_data) - mlen, format, args);
+  va_end(args);
+  return len + mlen;
+}
+
+/*********************************************************************************************\
  * GPIO Module and Template management
 \*********************************************************************************************/
 
@@ -883,12 +921,11 @@ bool JsonTemplate(const char* dataBuf)
 
 void TemplateJson()
 {
-  snprintf_P(mqtt_data, sizeof(mqtt_data), PSTR("{\"" D_JSON_NAME "\":\"%s\",\"" D_JSON_GPIO "\":["), Settings.user_template.name);
+  Response_P(PSTR("{\"" D_JSON_NAME "\":\"%s\",\"" D_JSON_GPIO "\":["), Settings.user_template.name);
   for (uint8_t i = 0; i < sizeof(Settings.user_template.gp); i++) {
-    snprintf_P(mqtt_data, sizeof(mqtt_data), PSTR("%s%s%d"), mqtt_data, (i>0)?",":"", Settings.user_template.gp.io[i]);
+    ResponseAppend_P(PSTR("%s%d"), (i>0)?",":"", Settings.user_template.gp.io[i]);
   }
-  snprintf_P(mqtt_data, sizeof(mqtt_data), PSTR("%s],\"" D_JSON_FLAG "\":%d,\"" D_JSON_BASE "\":%d}"),
-    mqtt_data, Settings.user_template.flag, Settings.user_template_base +1);
+  ResponseAppend_P(PSTR("],\"" D_JSON_FLAG "\":%d,\"" D_JSON_BASE "\":%d}"), Settings.user_template.flag, Settings.user_template_base +1);
 }
 
 /*********************************************************************************************\
@@ -1182,7 +1219,7 @@ void SetSeriallog(uint8_t loglevel)
 #ifdef USE_WEBSERVER
 void GetLog(uint8_t idx, char** entry_pp, size_t* len_p)
 {
-  char* entry_p = NULL;
+  char* entry_p = nullptr;
   size_t len = 0;
 
   if (idx) {
@@ -1221,6 +1258,7 @@ void Syslog(void)
     memcpy(log_data, syslog_preamble, strlen(syslog_preamble));
     PortUdp.write(log_data);
     PortUdp.endPacket();
+    delay(1);  // Add time for UDP handling (#5512)
   } else {
     syslog_level = 0;
     syslog_timer = SYSLOG_TIMER;
